@@ -1,7 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { google } from "@ai-sdk/google";
-import { streamText, UIMessage, convertToModelMessages, tool } from "ai";
-import { z } from "zod";
+import { streamText, UIMessage, convertToModelMessages, stepCountIs } from "ai";
 
 const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method !== "POST") {
@@ -11,22 +10,12 @@ const handler = async (req: NextApiRequest, res: NextApiResponse) => {
   }
 
   const { messages }: { messages: UIMessage[] } = req.body;
+  const STEP_COUNT = 5;
 
   const result = streamText({
     model: google("gemini-1.5-flash"),
+    stopWhen: stepCountIs(STEP_COUNT),
     messages: convertToModelMessages(messages),
-    tools: {
-      weather: tool({
-        description: "Get the weather in a location",
-        inputSchema: z.object({
-          location: z.string().describe("The location to get the weather for"),
-        }),
-        execute: async ({ location }) => ({
-          location,
-          temperature: 72 + Math.floor(Math.random() * 21) - 10,
-        }),
-      }),
-    },
   });
 
   result.pipeUIMessageStreamToResponse(res);
